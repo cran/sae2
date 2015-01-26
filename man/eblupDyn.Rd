@@ -1,0 +1,207 @@
+% File ~/sae2/man/eblupDyn.Rd
+\name{eblupDyn}
+\alias{eblupDyn}
+\alias{eblupRY}
+\title{EBLUP Fit of the Dynamic and Rao-Yu Time Series Models}
+\description{
+  Functions for producing EBLUP small area estimates of the dynamic or
+  Rao-Yu time series models through either ML or REML estimation of the variance
+  components. The functions can fit univariate or multivariate models.
+}
+\usage{
+eblupDyn(formula, D, T, vardir, method = c("REML","ML"),
+         MAXITER = 1000, PRECISION = .1e-05, data, \dots)
+         
+eblupRY(formula, D, T, vardir, method = c("REML","ML"),
+         MAXITER = 1000, PRECISION = .1e-05, data, \dots)
+}
+\arguments{
+  \item{formula}{For a univariate model, a \code{formula} for the linear
+    regression relationship between the dependent variable and the
+    independent variable(s). The variables included in formula must have
+    length equal to \code{D*T} and be sorted in ascending order by time within
+    each domain. 
+    
+    For a multivariate model, a list of formulas, one for each 
+    dependent variable. The number of dependent variables, \code{NV}, is 
+    determined from the length of the list. The dependent variables included 
+    in the formulas must each have length equal to \code{D*T} and be sorted
+    in ascending order by time within each component within each domain,
+    which is the same sorting requirement as for the univariate model. Further 
+    details of the model specification are given under Details.
+    }
+  \item{D}{The total number of domains.}
+  \item{T}{The number of time instances (constant for all domains).}
+  \item{vardir}{For the univariate model, the sampling covariance matrix 
+    for the direct estimates of the \code{D*T} elements of the dependent 
+    variable. The covariance matrix should be in the form of a square
+    matrix with \code{D*T} rows and columns. Non-zero covariances between 
+    domains are not allowed, so the matrix must have a block diagonal form 
+    with \code{D} blocks, each of which is a square matrix with \code{T} rows 
+    and columns. Note that within domain, non-zero covariances are allowed 
+    over time. Alternatively, \code{vardir} can be a list of \code{D} 
+    covariance matrices, each with \code{T} rows and columns.  
+    
+    For the multivariate model, the square covariance matrix for the 
+    \code{D*NV*T} elements of the dependent variables. The matrix must be in
+    the form of a square matrix with \code{D*NV*T} rows and columns. The 
+    variances and covariances should be in the sort order of time within
+    dependent variable within domain. Non-zero covariances between domains 
+    are not allowed, but non-zero covariances may be present across time 
+    and between components. Alternatively, \code{vardir} can be a list of
+    \code{D} covariance matrices, each with \code{NV*T} rows and columns.}
+  \item{method}{Whether restricted maximum likelihood \code{REML} or 
+    maximum likelihood \code{ML} should be used.}
+  \item{MAXITER}{The maximum number of iterations allowed for the 
+    Fisher-scoring algorithm, with a default value of 100.}
+  \item{PRECISION}{The convergence tolerance limit for the 
+    Fisher-scoring algorithm, with a default value of .000001.}
+  \item{data}{An optional data frame containing the variables named in 
+    \code{formula}. By default the variables are taken from the 
+     environment from which \code{eblupDyn} is called. Because 
+     \code{vardir} will be of a different size than the variables
+     in \code{formula}, \code{data} will not be searched for
+     \code{vardir}.}
+  \item{\dots}{Other parameters passed to \code{reml.dyn}, \code{mle.dyn},
+     \code{reml.Rao.Yu} or \code{mle.Rao.Yu}.}
+}
+\details{
+A typical model has the form response ~ terms where response is the 
+(numeric) response vector and terms is a series of terms which specifies a 
+linear predictor for response. A terms specification of the form first + 
+second indicates all the terms in first together with all the terms in 
+second with duplicates removed. 
+
+A formula has an implied intercept term. To remove this use either 
+y ~ x - 1 or y ~ 0 + x. See \code{\link{formula}} for more details of 
+allowed formulae.
+
+\code{eblupDyn} and \code{eblupRY} parse \code{formula} by calling functions
+within \code{R}, then calling one of the functions \code{\link{reml.dyn}}, 
+\code{\link{mle.dyn}}, \code{\link{reml.Rao.Yu}} or \code{\link{mle.Rao.Yu}}. 
+As a last step, \code{eblupDyn} and \code{eblupRY} finalize the returned list.
+
+The additional parameters passed to \code{\link{reml.dyn}} etc. 
+include \code{contrast.matrix}, which  specifies linear combinations 
+of estimates within domains, such as the sum over dependent variables 
+or across time. Corresponding MSE estimates are provided for the contrasts. 
+Another argument is \code{ids}, which accepts a data frame with \code{D}
+rows of domain identifiers that is included in the list returned by
+\code{eblupDyn} or \code{eblupRY}. Other parameters affect convergence 
+or provide starting values. If \code{iter.history} is set to TRUE, the 
+returned object will include more items with values of 
+statistics at each step of the iteration; see \code{\link{reml.dyn}} 
+for details.
+
+MSE estimation for REML for both the Rao-Yu and dynamic models follows
+the results summarized in Rao (2003, pp. 98-105). The MSE estimates 
+incorporate g1, g2, and g3 terms. Our simulations show that the REML estimates
+have somewhat smaller MSEs than the ML estimates, but this is not reflected in 
+the comparison of the estimated MSEs returned by the functions. The MSE 
+estimates under REML perform quite well on average. The MSE estimates for ML 
+use the same estimator as for REML,but they are modest underestimates of the 
+true MSE in the same simulations. 
+}
+\value{
+   \item{eblup}{In the univariate case, a vector of length \code{D*T} with 
+   the eblup estimates. In the multivariate case, a data frame of D*T rows 
+   and NV columns.} 
+   \item{fit}{A list summarizing the fit of the model with the following:
+     \itemize{
+       \item \code{model:} form of the model: T - Dynamic or Rao-Yu; REML
+            or ML.
+       \item \code{covergence:} a logical value indicating whether the 
+                 convergence criterion was met.
+       \item \code{iterations:} number of iterations performed by the 
+                Fisher-scoring algorithm.
+       \item \code{estcoef:} a data frame with the estimated model 
+           coefficients (\code{beta}) in the first column , 
+          their asymptotic standard errors (\code{std.error}) in the 
+          second column, the t statistics (\code{tvalue}) in the third column 
+           and the p-values (\code{pvalue}) of the significance of each 
+           coefficient in last column.
+       \item \code{estvarcomp:}  a data frame with the estimated values 
+           of the variances and correlation coefficients in the first column
+           (\code{estimate}) and their asymptotic standard errors in the 
+           second column (\code{std.error}).
+       \item \code{goodness:} the log-likelihood and, if REML, the restricted 
+           log-likelihood.
+       }
+     }
+   \item{parm}{A labelled vector with the estimated variance components, 
+         correlations, and number of iterations.}
+   \item{coef}{A labelled vector of coefficients of the model or models.}
+   \item{ids}{A data frame with \code{D} rows and one or more columns of 
+         numeric or character domain identifiers.}
+   \item{delta}{An ordered vector of the variance components, which may be 
+         used as starting values for additional iterations.}
+   \item{eblup.mse}{MSE estimates for eblup.}
+   \item{eblup.g1}{The g1 term of the MSE estimate.}
+   \item{eblup.g2}{The g2 term of the MSE estimate.}
+   \item{eblup.g3}{The g3 term of the MSE estimate.}
+   \item{est.fixed}{Estimates based on fixed effects only.}
+   \item{est.fixed.var}{The variance-covariance matrix for the estimates in 
+         \code{coef}.}
+   \item{eblup.wt1}{Weights given to the direct estimate in forming \code{eblup}.}
+   \item{eblup.wt2}{Weights given to the direct estimate, including
+        effects through estimating the fixed effect coefficients.}
+   \item{contrast.est}{Estimates requested by the specified contrasts.}
+   \item{contrast.mse}{MSE estimates for \code{contrast.est}.}
+   \item{contrast.g1}{The g1 term in the estimation of \code{contrast.mse}.}
+   \item{contrast.g2}{The g2 term in the estimation of \code{contrast.mse}.}
+   \item{contrast.g3}{The g3 term in the estimation of \code{contrast.mse}.}
+   \item{contrast.fixed.est}{Contrast estimates based on the fixed effect 
+             model.}
+   \item{contrast.fixed.var}{Variance estimates for the fixed effect model.}
+   \item{contrast.wt1}{Weight wt1 given to the direct estimate in estimating 
+       the contrasts.}
+   \item{contrast.wt2}{Weight wt2 in estimating the contrasts.}
+   \item{inf.mat}{Information matrix for the components of \code{delta}.}
+   \item{var.coef}{Variance covariance matrix for \code{coef}.}
+}
+
+\references{
+- Fay, R.E. and Herriot, R.A. (1979). Estimation of income from small places: An application of James-Stein procedures to census data. Journal of the American Statistical Association 74, 269-277.
+
+- Fay, R.E., Planty, M. and Diallo, M.S. (2013). Small area estimates from the National Crime Victimization Survey. Proceedings of the Joint Statistical Meetings. American Statistical Association, pp. 1544-1557.
+
+- Rao, J.N.K. (2003). Small Area Estimation. Wiley, New York.
+
+- Rao, J.N.K. and Yu, M. (1994). Small area estimation by combining time series and cross-sectional data. Canadian Journal of Statistics 22, 511-528.
+
+}
+\author{
+Robert E. Fay, Mamadou Diallo
+}
+\examples{
+D <- 20 # number of domains
+T <- 5 # number of years
+set.seed(1)
+data <- data.frame(Y= mvrnormSeries(D=D, T=T, rho.dyn=.9, sigma.v.dyn=1, 
+   sigma.u.dyn=.19, sigma.e=diag(5)), X=rep(1:T, times=D))
+result.dyn  <- eblupDyn(Y ~ X, D, T, vardir = diag(100), data=data)
+result.dyn$fit
+
+require(sae)
+data(spacetime)      # Load data set from sae package
+data(spacetimeprox)  # Load proximity matrix 
+
+D <- nrow(spacetimeprox)            # number of domains
+T <- length(unique(spacetime$Time)) # number of time instants
+# Fit model ST with AR(1) time effects for each domain
+resultST <- eblupSTFH(Y ~ X1 + X2, D, T, Var, spacetimeprox,
+                      data=spacetime)
+resultT  <- eblupDyn(Y ~ X1 + X2, D, T, vardir = diag(spacetime$Var),
+                      data=spacetime, ids=spacetime$Area)
+resultT.RY  <- eblupRY(Y ~ X1 + X2, D, T, vardir = diag(spacetime$Var),
+                      data=spacetime, ids=spacetime$Area)
+resultST$fit
+resultT$fit
+resultT.RY$fit
+rowsT <- seq(T, T*D, by=T)
+data.frame(Domain=spacetime$Area[rowsT], Y=spacetime$Y[rowsT], 
+              EBLUP_ST=resultST$eblup[rowsT],
+              EBLUB_Dyn=resultT$eblup[rowsT],
+              EBLUP_RY=resultT.RY$eblup[rowsT])
+}
+

@@ -1,0 +1,2 @@
+export(eblupDyn, eblupRY, mvrnormSeries)
+importFrom(MASS, mvrnorm)

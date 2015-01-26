@@ -1,0 +1,15 @@
+Package: sae2
+Type: Package
+Title: Small Area Estimation: Time-series Models
+Version: 0.1-1
+Date: 2015-01-26
+Author: Robert E. Fay, Mamadou Diallo
+Maintainer: Robert Fay <bobfay@hotmail.com>
+Depends: R (>= 2.14.0), MASS
+Suggests: sae
+Description: Time series models for small area estimation based on area-level models.
+License: GPL-2
+Packaged: 2015-01-26 11:09:39 UTC; Bob
+NeedsCompilation: no
+Repository: CRAN
+Date/Publication: 2015-01-26 12:23:20

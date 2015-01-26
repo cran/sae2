@@ -1,0 +1,16 @@
+deb4854f1b2cef2ba9288fce8129f859 *DESCRIPTION
+7bbb6efa0a87973ca39016e554711774 *NAMESPACE
+a296b07e3f6f0cc246fbb3fdb99b6b62 *R/Gamma_u_f.R
+c17d0cd016c8ddf922a673925000f78d *R/Gamma_v_f.R
+35720fb28311e61bd11793ae4203b542 *R/eblupDyn.R
+0694c6b7ba744614def9a110640174f9 *R/eblupRY.R
+1e487a64c7578805b0779162cf1983d3 *R/mleRaoYu.R
+52c66fb90d178f07a574ae129a02a023 *R/mledyn.R
+99643cc023edca9f03d481c0d29aaa63 *R/mvrnormSeries.R
+47bbb1676fab9606a0d36054ae181de2 *R/orth.c.R
+ee49162116d1786ff3ab3dda71b89542 *R/remlRaoYu.R
+7ac75effce7a7417795f83cee0cc4588 *R/remldyn.R
+b607111f3f4961437b6554dd2ce0d0d1 *man/eblupDyn.Rd
+d538f8cb2cda2e3172de00bc0515c09f *man/mvrnormSeries.Rd
+5cc1886df3723114f3c1116db304d709 *man/remldyn.Rd
+45c1f21f0a25a7e532a75c3e8ba08dfd *man/sae2-package.Rd
