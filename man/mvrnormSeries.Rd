@@ -1,4 +1,4 @@
-% File ~/sae2/man/mvrnormSeries.Rd
+% File c:/sae2/man/mvrnormSeries.Rd
 \name{mvrnormSeries}
 \alias{mvrnormSeries}
 \title{Generate data under the Dynamic or Rao-Yu Time Series Models}
@@ -10,8 +10,10 @@
   \code{mvrnorm} in \pkg{MASS}.
 }
 \usage{
-mvrnormSeries(NV=1, D, T, sigma.e, rho.dyn, sigma.v.dyn, sigma.u.dyn, 
-   rho.u.dyn, rho.RY, sigma.v.RY, sigma.u.RY, rho.u.RY, tol=1e-6)
+mvrnormSeries(NV=1,  D,  T,  sigma.e, 
+   rho.dyn,  sigma.v.dyn,  sigma.u.dyn, rho.u.dyn, 
+   rho.RY,   sigma.v.RY,   sigma.u.RY,   rho.u.RY,  tol=1e-6,
+   conditional.mean=FALSE)
 }
 \arguments{
   \item{NV}{The number of variables.}
@@ -47,15 +49,25 @@ mvrnormSeries(NV=1, D, T, sigma.e, rho.dyn, sigma.v.dyn, sigma.u.dyn,
     correlations should be specified in the order (2,1), (3,1), (3,2).}
   \item{tol}{A tolerance parameter used by \code{mvrnorm} in \pkg{MASS} to
     determine if the covariance matrix is non-singular.}
+  \item{conditional.mean}{If true, the function will also return the 
+    generated values of the random effects.}
 }
 \details{
 The function assembles the covariance matrix from the covariance matrix 
 under the dynamic model (if specified), the Rao-Yu model (if specified)
 and a required sampling covariance matrix.
 }
-\value{For \code{NV=1}, a multivariate normal random vector with mean
-zero and length \code{D*T}. For \code{NV>1}, a matrix with \code{D*T} rows
-and \code{NV} columns.
+\value{If \code{conditional.mean=FALSE}, then for \code{NV=1}, a multivariate 
+       normal random vector with mean zero and length \code{D*T}. 
+       For \code{NV>1}, a matrix with \code{D*T} rows and \code{NV} 
+       columns.
+       
+       If \code{conditional.mean=TRUE}, a list with the first element as above 
+       and a second element that is the sum of the random effects without
+       the sampling error. Simulation studies can evaluate the small area
+       estimates using the first element of the list as input against
+       the second element of the list, which is the target of the small area
+       estimation.            
 }
 \author{
 Robert E. Fay
@@ -63,7 +75,7 @@ Robert E. Fay
 \examples{
 set.seed(7)
 mvrnormSeries(D=2, T=5, sigma.e=diag(5), rho.dyn=.8,
-    sigma.v.dyn=2, sigma.u.dyn=.72)
+    sigma.v.dyn=2, sigma.u.dyn=.72, conditional.mean=TRUE)
 mvrnormSeries(NV=2, D=2, T=5, sigma.e=diag(10), rho.dyn=.8,
     sigma.v.dyn=2, sigma.u.dyn=.72, rho.u.dyn=.8)
 }

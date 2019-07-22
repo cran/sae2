@@ -1,7 +1,7 @@
 mvrnormSeries <- function(NV=1, D, T, sigma.e, 
    rho.dyn, sigma.v.dyn, sigma.u.dyn, rho.u.dyn,
    rho.RY, sigma.v.RY, sigma.u.RY, rho.u.RY,
-   tol=1e-6) {
+   tol=1e-6, conditional.mean=FALSE) {
   if (missing(T)) stop("'T' must be specified")
   if (T < 3) stop("'T' must be >2")
   if (class(sigma.e) == "list") {
@@ -24,8 +24,8 @@ mvrnormSeries <- function(NV=1, D, T, sigma.e,
   }
   sigma <- matrix(0, NV*T, NV*T)
   mu <- rep(0, NV*T)
-  if (!(missing(rho.dyn) | missing(sigma.v.dyn) | missing(sigma.v.dyn))) {
-    if (missing(rho.dyn) | missing(sigma.v.dyn) | missing(sigma.v.dyn))
+  if (!(missing(rho.dyn) | missing(sigma.v.dyn) | missing(sigma.u.dyn))) {
+    if (missing(rho.dyn) | missing(sigma.v.dyn) | missing(sigma.u.dyn))
       stop("some parameters missing for dynamic model")
     if (NV ==1) {
       if(length(sigma.v.dyn) != 1 |
@@ -56,8 +56,8 @@ mvrnormSeries <- function(NV=1, D, T, sigma.e,
         ((sqrt_v%*%t(sqrt_v)) * u_corr) %x% Gamma_v_f(rho.dyn, T)[[1]]
     }
   }
-  if (!(missing(rho.RY) | missing(sigma.v.RY) | missing(sigma.v.RY))) {
-    if (missing(rho.RY) | missing(sigma.v.RY) | missing(sigma.v.RY))
+  if (!(missing(rho.RY) | missing(sigma.v.RY) | missing(sigma.u.RY))) {
+    if (missing(rho.RY) | missing(sigma.v.RY) | missing(sigma.u.RY))
       stop("some parameters missing for Rao-Yu model")
     Gamma_v <- matrix(1,nrow=T,ncol=T)
     Gamma_b <- matrix(rep(1:T,times=T),nrow=T, ncol=T)
@@ -65,7 +65,7 @@ mvrnormSeries <- function(NV=1, D, T, sigma.e,
     if(rho.RY > 0) {
      Gamma_u <- rho.RY^(Gamma_s)/(1-rho.RY^2)
     } else {
-      Gamma_u <- diag(T)
+     Gamma_u <- diag(T)
     }
     if (NV ==1) {
       if(length(sigma.v.RY) != 1 |
@@ -98,37 +98,91 @@ mvrnormSeries <- function(NV=1, D, T, sigma.e,
   }
   if (NV == 1) {
     y <- rep(0, D*T)
-    if(class(sigma.e) == "list") {
+    if(conditional.mean) {
+      y.mean <- rep(0, D*T)
       for (i in 1:D) {
-        y[((i-1)*T + 1):(i*T)] <-
-          mvrnorm(mu=mu, Sigma=sigma+sigma.e[[i]], tol=tol)
+        y.mean[((i-1)*T + 1):(i*T)] <-
+            mvrnorm(mu=mu, Sigma=sigma, tol=tol)
+      }
+    }      
+    if(class(sigma.e) == "list") {
+      if(conditional.mean) {
+        for (i in 1:D) {
+          y[((i-1)*T + 1):(i*T)] <- y.mean[((i-1)*T + 1):(i*T)] +
+            mvrnorm(mu=mu, Sigma=sigma.e[[i]], tol=tol)
+        }
+      } else {
+        for (i in 1:D) {
+          y[((i-1)*T + 1):(i*T)] <-
+            mvrnorm(mu=mu, Sigma=sigma+sigma.e[[i]], tol=tol)
+        }
       }
     } else {
-      for (i in 1:D) {
-        y[((i-1)*T + 1):(i*T)] <-
-          mvrnorm(mu=mu, Sigma=sigma+sigma.e, tol=tol)
+      if(conditional.mean) {
+        for (i in 1:D) {
+          y[((i-1)*T + 1):(i*T)] <- y.mean[((i-1)*T + 1):(i*T)] +
+            mvrnorm(mu=mu, Sigma=sigma.e, tol=tol)
+        }
+      } else {
+        for (i in 1:D) {
+          y[((i-1)*T + 1):(i*T)] <-
+            mvrnorm(mu=mu, Sigma=sigma+sigma.e, tol=tol)
+        }
       }
     }
   } else {
     y <- matrix(0, nrow=D*T, ncol=NV)
-    if(class(sigma.e) == "list") {
+    if(conditional.mean) {
+      y.mean <- matrix(0, nrow=D*T, ncol=NV)
       for (i in 1:D) {
-        y.temp <- 
-            mvrnorm(mu=mu, Sigma=sigma+sigma.e[[i]], tol=tol)
+        y.mean.temp <- mvrnorm(mu=mu, Sigma=sigma, tol=tol)
         for (nv in 1:NV) {
-           y[((i-1)*T+1):(i*T), nv] <- y.temp[((nv-1)*T+1):(nv*T)]
+           y.mean[((i-1)*T+1):(i*T), nv] <- y.mean.temp[((nv-1)*T+1):(nv*T)]
+        } 
+      }
+    }
+    if(class(sigma.e) == "list") {
+      if(conditional.mean) {
+        for (i in 1:D) {
+          y.temp <- mvrnorm(mu=mu, Sigma=sigma.e[[i]], tol=tol)
+          for (nv in 1:NV) {
+             y[((i-1)*T+1):(i*T), nv] <- y.mean[((i-1)*T+1):(i*T), nv] + 
+                  y.temp[((nv-1)*T+1):(nv*T)]
+          }
+        }
+      } else {   
+        for (i in 1:D) {
+          y.temp <- 
+             mvrnorm(mu=mu, Sigma=sigma+sigma.e[[i]], tol=tol)
+          for (nv in 1:NV) {
+             y[((i-1)*T+1):(i*T), nv] <- y.temp[((nv-1)*T+1):(nv*T)]
+          }
         }
       }
     } else {
-      for (i in 1:D) {
-        y.temp <- 
-            mvrnorm(mu=mu, Sigma=sigma+sigma.e, tol=tol)
-        for (nv in 1:NV) {
-           y[((i-1)*T+1):(i*T), nv] <- y.temp[((nv-1)*T+1):(nv*T)]
+      if(conditional.mean) {
+        for (i in 1:D) {
+          y.temp <- mvrnorm(mu=mu, Sigma=sigma.e, tol=tol)
+          for (nv in 1:NV) {
+             y[((i-1)*T+1):(i*T), nv] <- y.mean[((i-1)*T+1):(i*T), nv] + 
+                  y.temp[((nv-1)*T+1):(nv*T)]
+          }
+        }
+      } else {
+        for (i in 1:D) {
+          y.temp <- 
+              mvrnorm(mu=mu, Sigma=sigma+sigma.e, tol=tol)
+          for (nv in 1:NV) {
+             y[((i-1)*T+1):(i*T), nv] <- y.temp[((nv-1)*T+1):(nv*T)]
+          }
         }
       }
     }
   }
-  return(y)
+  if(conditional.mean) {
+    return(list(y=y, y.mean=y.mean))
+  } else {
+    return(y)
+  }
 }
 

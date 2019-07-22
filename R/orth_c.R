@@ -1,11 +1,11 @@
 # function to compute an orthogonal complement of X, used in computing
 # the constrained likelihood
 
-orth.c <- function(X,tol=.1e-7) {
+orth_c <- function(X, tol=.1e-7) {
      nr <- nrow(X)
      nc <- ncol(X)
-     XE <- cbind(X,diag(nr))
-     use.c <- rep(TRUE,times=nr+nc)
+     XE <- cbind(X, diag(nr))
+     use.c <- rep(TRUE, times=nr+nc)
      for (i in 1:(nr+nc)) {
        w<- sum(XE[,i]^2)
        if (w < tol) use.c[i] <- FALSE else
@@ -22,4 +22,4 @@ orth.c <- function(X,tol=.1e-7) {
       cols <- cols[use.c[cols]==TRUE]
       XE <- XE[,cols] 
       return(XE)
-      }
+}
