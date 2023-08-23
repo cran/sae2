@@ -1,7 +1,7 @@
 # dynRYfit - maximum likelihood or restricted maximum likelihood estimation 
 # of the multivariate dynamic or Rao-Yu model
 
-dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
+dynRYfit <- function(y, X, M, TI, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
          ncolx=NULL, sig2_u=1, sig2_v=1, rho=.8, rho_u =.4, delta=NULL,  
          rho.fixed=NULL, y.include=NULL, ids=NULL, contrast.matrix=NULL,  
          baby.steps=TRUE, dampening=NULL, iter.history=NULL,
@@ -35,10 +35,10 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
          y.rescale <- rep(y.rescale, NV)
       if (length(y.rescale) != NV) 
          stop("y.rescale must be of length 1 or NV")
-      y.adjust <- rep(1, times=M*T*NV)
+      y.adjust <- rep(1, times=M*TI*NV)
       for (m in 1:M) {
          for (nv in 1:NV) {
-            y.adjust[((m-1)*T*NV + (nv-1)*T + 1):((m-1)*T*NV + nv*T)] <-
+            y.adjust[((m-1)*TI*NV + (nv-1)*TI + 1):((m-1)*TI*NV + nv*TI)] <-
                   y.rescale[nv]               
          }
       }    
@@ -100,10 +100,10 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
          X.save <- X
          y.save <- y 
          vcov_e.save <- vcov_e
-         index.obs <- rep(0, NV*M*T)
+         index.obs <- rep(0, NV*M*TI)
          for (i in 1:M) {
-            index.obs[(NV*T*(i-1)+1):(NV*T*i)] <-
-                           c((NV*T*(y.in[i]-1)+1):(NV*T*y.in[i]))
+            index.obs[(NV*TI*(i-1)+1):(NV*TI*i)] <-
+                           c((NV*TI*(y.in[i]-1)+1):(NV*TI*y.in[i]))
          }
          if(use.y.rescale) {
             y.adjust.save <- y.adjust
@@ -113,31 +113,53 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
          X <- X.save[index.obs, ]
          vcov_e <- vcov_e.save[index.obs, index.obs]
       }
+   } else {
+      y.in <- 1:M
    }
-  
+   nonposeigen <- vector(mode = "integer", length=0)
+   largecondition <- vector(mode = "integer", length=0)
+   for (m in 1:M) {
+      vcovx <- vcov_e[((m-1)*NV*TI+1):(m*NV*TI),
+                      ((m-1)*NV*TI+1):(m*NV*TI)]
+      values <- eigen(vcovx, symmetric=TRUE, only.values=TRUE)$values
+      if (values[NV*TI] <= 0) {
+         nonposeigen <- append(nonposeigen, y.in[m])
+      } else if (values[1]/values[NV*TI] > .1e14) {
+         largecondition <- append(largecondition, y.in[m]) 
+      }
+   }
+   if (length(nonposeigen) > 0) {
+      warning("Sampling variance has zero or negative eigenvalues", 
+                    immediate.=TRUE)
+      print(c("Areas", paste(nonposeigen)))
+   }
+   if (length(largecondition) > 0) {
+      warning("Sampling variance has large condition number", immediate.=TRUE)
+      print(c("Areas", paste(largecondition)))
+   }
    if(is.null(contrast.matrix)) {
-      mi.mat <- diag(NV*T)
-      n.contr <- NV*T
+      mi.mat <- diag(NV*TI)
+      n.contr <- NV*TI
       contrast.mse <- contrast.g1 <- contrast.g2 <- contrast.g3 <- 
           contrast.fixed.var <- NULL
-   } else {
+   } else{
       if(is.vector(contrast.matrix)) contrast.matrix <- matrix(contrast.matrix,
                                           nrow=length(contrast.matrix), ncol=1)
       if(!is.matrix(contrast.matrix)) 
          stop("contrast.matrix must be a matrix or a vector")
-      if(dim(contrast.matrix)[1]!=NV*T) 
-         stop("The number of rows for contrast.matrix must agree with NV*T")
-      n.contr <- NV*T + dim(contrast.matrix)[2]
-      mi.mat <- matrix(0, nrow=NV*T, ncol=n.contr)
-      mi.mat[, 1:(NV*T)] <- diag(NV*T)
-      mi.mat[,(NV*T+1):n.contr] <- contrast.matrix
+      if(dim(contrast.matrix)[1]!=NV*TI) 
+         stop("The number of rows for contrast.matrix must agree with NV*TI")
+      n.contr <- NV*TI + dim(contrast.matrix)[2]
+      mi.mat <- matrix(0, nrow=NV*TI, ncol=n.contr)
+      mi.mat[, 1:(NV*TI)] <- diag(NV*TI)
+      mi.mat[,(NV*TI+1):n.contr] <- contrast.matrix
       contrast.mse <- contrast.g1 <- contrast.g2 <- contrast.g3  <- 
          contrast.fixed.var <- matrix(0, nrow=M, ncol=dim(contrast.matrix)[2])
    }
    contrast.est <- contrast.fixed.est <- contrast.wt1 <- contrast.wt2 <- 
           matrix(0, nrow=M, ncol=n.contr)
      
-   N <- NV*M*T
+   N <- NV*M*TI
    len.rho_u <- (NV*(NV-1))/2
    if(!starting.delta) {
       if (NV > 1){ 
@@ -145,6 +167,14 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
                     rho_u=rho_u[1:len.rho_u]) 
       } else {
          delta <- c(sig2_u=sig2_u[1:NV], sig2_v=sig2_v[1:NV], rho=rho)
+      }
+   } else {
+      if (NV > 1) {
+         names(delta) <- c(paste0("sig_u", 1:NV), paste0("sig_v", 1:NV),
+                           "rho", paste0("rho_u", 1:len.rho_u))
+      } else {
+         names(delta) <- c(paste0("sig_u", 1:NV), paste0("sig_v", 1:NV),
+                           "rho")
       }
    }
    len.delta <- 2*NV+1 + len.rho_u
@@ -171,29 +201,29 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
    rho <- delta[index.rho]
    rho_u <- delta[(index.rho+1):len.delta]
    if (model == "dyn") {
-      Gamma.list <- Gamma_u_f(rho, T)
+      Gamma.list <- Gamma_u_f(rho, TI)
       Gamma_u <- Gamma.list[[1]]
       d.Gamma_u <- Gamma.list[[2]]
-      Gamma.list <- Gamma_v_f(rho, T)
+      Gamma.list <- Gamma_v_f(rho, TI)
       Gamma_v <- Gamma.list[[1]]
       d.Gamma_v <- Gamma.list[[2]]
    } else {
-      Gamma_b <- matrix(rep(1:T,times=T),nrow=T, ncol=T)
+      Gamma_b <- matrix(rep(1:TI,times=TI),nrow=TI, ncol=TI)
       Gamma_s <- abs(Gamma_b-t(Gamma_b))
       if(rho > 0) {
          Gamma_u <- rho^(Gamma_s)/(1-rho^2)
          d.Gamma_u <- ((Gamma_s * rho^(Gamma_s) * (1-rho^2)/rho) +
                       2 * rho * rho^(Gamma_s))/((1-rho^2)^2)
       } else {
-         Gamma_u <- diag(T)
-         d.Gamma_u <- matrix(0, nrow=T, ncol=T)
-         for (i in 2:T) {
+         Gamma_u <- diag(TI)
+         d.Gamma_u <- matrix(0, nrow=TI, ncol=TI)
+         for (i in 2:TI) {
             d.Gamma_u[i-1, i] < -1
             d.Gamma_u[i, i-1] < -1 
          }
       }
-      Gamma_v <- matrix(1,nrow=T,ncol=T)
-      d.Gamma_v <- matrix(0,nrow=T,ncol=T)
+      Gamma_v <- matrix(1,nrow=TI,ncol=TI)
+      d.Gamma_v <- matrix(0,nrow=TI,ncol=TI)
    }
    u_corr <- diag(1, NV)
    if (NV > 1) {
@@ -209,15 +239,15 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
    v_base <- ((sqrt_v %*% t(sqrt_v)) * u_corr) %x% Gamma_v 
    V <- vcov_e + diag(M) %x% (u_base + v_base)
    V.inv <- try(solve(V, tol=tol))
-   if(class(V.inv) == "try-error") 
+   if(inherits(V.inv, "try-error")) 
       stop("Initial V matrix (incl. random effects) is singular")
    V.inv.X <- try(solve(V, X, tol=tol))
-   if(class(V.inv.X) == "try-error")
+   if(inherits(V.inv.X, "try-error"))
       stop("Initial V-inverse X matrix is singular")
    Xt.V.inv.X <- t(X) %*% V.inv.X
    B_Est   <- try(solve(Xt.V.inv.X, t(X) %*% solve(V, y, tol=tol),  # (6.2.5)
                   tol=tol))
-   if(class(B_Est) == "try-error")
+   if(inherits(B_Est, "try-error"))
       stop("Initial calculation of beta failed")
    res <- y - X %*% B_Est
    A <- orth_c(X)
@@ -245,12 +275,12 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
       }        
       # compute the current information matrix corresponding to delta   
       V.inv.res <- try(solve(V, res, tol=tol))
-      if(class(V.inv.res) == "try-error") {
+      if(inherits(V.inv.res, "try-error")) {
          V.inv.res <- NA
          break
       }
       Xt.V.inv.X.inv <- try(solve(Xt.V.inv.X, tol=tol))
-      if(class(Xt.V.inv.X.inv) == "try-error") {
+      if(inherits(Xt.V.inv.X.inv, "try-error")) {
          Xt.V.inv.X.inv <- NA
          break
       }
@@ -259,11 +289,11 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
       s <- rep(0, times=len.delta)
       inf.mat <- matrix(0, nrow=len.delta, ncol=len.delta)
 
-      V.j <- array(0 ,dim=c(T*NV, T*NV, len.delta))
+      V.j <- array(0 ,dim=c(TI*NV, TI*NV, len.delta))
       if (method == "REML") {   
          V.j.m <- array(0, dim=c(N, N, len.delta))
       } else {
-         V.j.m <- array(0, dim=c(T*NV, T*NV, len.delta))
+         V.j.m <- array(0, dim=c(TI*NV, TI*NV, len.delta))
       }   
       for (i in 1:NV) { 
          c.m <- matrix(0, nrow=NV, ncol=NV)
@@ -321,11 +351,11 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
       if (method == "REML") {     
          for (i in 1:len.delta) {
             for (m in 1:M) {
-               r1 <- (m-1)*T*NV + 1
-               r2 <- m*T*NV
+               r1 <- (m-1)*TI*NV + 1
+               r2 <- m*TI*NV
                for (mp in 1:M) {
-                  r1p <- (mp-1)*T*NV + 1
-                  r2p <- mp*T*NV
+                  r1p <- (mp-1)*TI*NV + 1
+                  r2p <- mp*TI*NV
                   V.j.m[r1:r2, r1p:r2p, i] <- P[r1:r2, r1p:r2p] %*% 
                                   as.matrix(V.j[, , i]) 
                }
@@ -346,8 +376,8 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
          }
       } else {
          for (m in 1:M) {
-            r1 <- (m-1)*T*NV+1
-            r2 <- m*T*NV
+            r1 <- (m-1)*TI*NV+1
+            r2 <- m*TI*NV
             V.inv <- solve(V[r1:r2, r1:r2], tol=tol)
             V.inv.res <- V.inv %*% res[r1:r2]
             for (i in 1:len.delta) {
@@ -392,7 +422,7 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
          B_Est <- c(B_Est)
          names(B_Est) <- attr(X, "dimnames")[[2]]
          Xt.V.inv.X.inv <- try(solve(Xt.V.inv.X, tol=tol))
-         if(class(Xt.V.inv.X.inv) == "try-error") {
+         if(inherits(Xt.V.inv.X.inv, "try-error")) {
             warning("Unable to invert X-transpose-V-inverse-X matrix", 
                immediate.=TRUE)
             Xt.V.inv.X.inv <- NA
@@ -402,7 +432,7 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
 	 } else {
 	    test.inv <- try(solve(inf.mat[ix.start, ix.start], tol=tol))
 	 }
-         if(class(test.inv) == "try-error") 
+         if(inherits(test.inv, "try-error")) 
             warning("Information matrix has become singular", immediate.=TRUE)
          if(use.y.rescale) {
             parm[2:(1+2*NV)] <- parm[2:(1+2*NV)]/(delta.adjust[1:(2*NV)]^2)
@@ -435,7 +465,7 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
       } else {
          inf.mat.inv <- try(solve(inf.mat[ix.start, ix.start], tol=tol))
       }
-      if(class(inf.mat.inv) == "try-error") {
+      if(inherits(inf.mat.inv, "try-error")) {
          bad.inf.mat <- TRUE
          print("Information matrix has become ill-conditioned")
          print(inf.mat)
@@ -525,7 +555,7 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
                ix <- ix[-i.out]
                delta.delta[] <- 0
                inf.mat.inv <- try(solve(inf.mat[ix, ix]))
-               if(class(inf.mat.inv) == "try-error")  next
+               if(inherits(inf.mat.inv, "try-error"))  next
                if(ix.index < ix.len) delta.delta[ix] <- (.5^(adj.iter-1)) *
                                 solve(inf.mat[ix, ix], s[ix], tol=tol)
             } else if (length(ix) == 1 | adj.ratio[ix[i.out]] > .5^(iter/4) | 
@@ -538,7 +568,7 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
                ix <- ix[-i.out]
                delta.delta[] <- 0
                inf.mat.inv <- try(solve(inf.mat[ix, ix]))
-               if(class(inf.mat.inv) == "try-error")  next
+               if(inherits(inf.mat.inv, "try-error"))  next
                if(ix.index < ix.len) delta.delta[ix] <- (.5^(adj.iter-1))*
                                 solve(inf.mat[ix, ix], s[ix], tol=tol)
             }
@@ -559,23 +589,23 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
          rho <- delta[index.rho]
          rho_u <- delta[(index.rho+1):len.delta]
          if (model == "dyn") {
-            Gamma.list <- Gamma_u_f(rho, T)
+            Gamma.list <- Gamma_u_f(rho, TI)
             Gamma_u <- Gamma.list[[1]]
             d.Gamma_u <- Gamma.list[[2]]
-            Gamma.list <- Gamma_v_f(rho, T)
+            Gamma.list <- Gamma_v_f(rho, TI)
             Gamma_v <- Gamma.list[[1]]
             d.Gamma_v <- Gamma.list[[2]]
          } else {
-            Gamma_b <- matrix(rep(1:T,times=T),nrow=T, ncol=T)
+            Gamma_b <- matrix(rep(1:TI,times=TI),nrow=TI, ncol=TI)
             Gamma_s <- abs(Gamma_b-t(Gamma_b))
             if(rho > 0) {
                Gamma_u <- rho^(Gamma_s)/(1-rho^2)
                d.Gamma_u <- ((Gamma_s * rho^(Gamma_s) * (1-rho^2)/rho) +
                       2*rho* rho^(Gamma_s))/((1-rho^2)^2)
             } else {
-               Gamma_u <- diag(T)
-               d.Gamma_u <- matrix(0,nrow=T,ncol=T)
-               for (i in 2:T) {
+               Gamma_u <- diag(TI)
+               d.Gamma_u <- matrix(0,nrow=TI,ncol=TI)
+               for (i in 2:TI) {
                   d.Gamma_u[i-1,i]<-1
                   d.Gamma_u[i,i-1]<-1
                }
@@ -592,7 +622,7 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
         
          V <- vcov_e + diag(M) %x% (u_base + v_base)
          V.inv <- try(solve(V, tol=tol))
-         if(class(V.inv) == "try-error") {
+         if(inherits(V.inv, "try-error")) {
             V.inv <- NA
             next
          }
@@ -600,7 +630,7 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
          Xt.V.inv.X <- t(X) %*% V.inv.X         
          B_Est <- try(solve(Xt.V.inv.X, t(X) %*% solve(V, y, tol=tol), # (6.2.5)
                          tol=tol))
-         if(class(B_Est) == "try-error") {
+         if(inherits(B_Est, "try-error")) {
             B_Est <- NA
             next
          }          
@@ -711,8 +741,8 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
    v_base <- ((sqrt_v %*% t(sqrt_v)) * u_corr) %x% Gamma_v
    M_term_base <- u_base + v_base
    for (m in 1:M){
-      r1 <- NV*(m-1)*T + 1
-      r2 <- NV*m*T
+      r1 <- NV*(m-1)*TI + 1
+      r2 <- NV*m*TI
       Xi <- X[r1:r2, ]
       for (comp in 1:n.contr) {
          mi <- mi.mat[, comp]
@@ -725,7 +755,7 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
          contrast.wt1[m, comp] <- t(mi) %*% 
              solve(V[r1:r2, r1:r2], t(M_term.t), tol=tol) / sum(mi*mi)
          contrast.wt2[m, comp] <- contrast.wt1[m,comp] + t(mi) %*% 
-             (diag(NV*T) - solve(V[r1:r2,r1:r2], M_term_base, tol=tol)) %*%
+             (diag(NV*TI) - solve(V[r1:r2,r1:r2], M_term_base, tol=tol)) %*%
              (Xi %*% Xt.V.inv.X.inv %*% t(Xi) %*% 
              solve(V[r1:r2,r1:r2], mi, tol=tol))/sum(mi*mi)
       }
@@ -734,8 +764,8 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
 
 # begin MSE calculation
    Gi <- u_base + v_base
-   d.bi <- matrix(0, nrow=NV*T, ncol=len.delta)
-   d.V  <- array(0, dim=c(NV*T, NV*T, len.delta))
+   d.bi <- matrix(0, nrow=NV*TI, ncol=len.delta)
+   d.V  <- array(0, dim=c(NV*TI, NV*TI, len.delta))
    g1 <- g2 <- g3 <- fixed.var <- matrix(0, nrow=M, ncol=n.contr)
 
    for (i in 1:NV) { 
@@ -789,8 +819,8 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
       }
  
    for (m in 1:M){
-      r1 <- NV*(m-1)*T + 1
-      r2 <- NV*m*T
+      r1 <- NV*(m-1)*TI + 1
+      r2 <- NV*m*TI
       Xi <- X[r1:r2, ]
       Vi <- V[r1:r2, r1:r2]
       vcov_ei <- vcov_e[r1:r2, r1:r2]
@@ -831,14 +861,14 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
             }
             return(y)
          }
-         index.non.obs <- rep(0, NV*MM*T)
+         index.non.obs <- rep(0, NV*MM*TI)
          g1.non <- g2.non <- zero.non <- matrix(0, nrow=MM, ncol=n.contr)
          contrast.est.non <- contrast.fixed.non <- 
                              matrix(0, nrow=MM, ncol=n.contr)
          for (m in 1:MM) {
-            index.non.obs[(NV*T*(m-1)+1):(NV*T*m)] <-
-                        c((NV*T*(y.out[m]-1)+1):(NV*T*y.out[m]))
-            Xi <- as.matrix(X.save[(NV*T*(y.out[m]-1) + 1):(NV*T*y.out[m]),])
+            index.non.obs[(NV*TI*(m-1)+1):(NV*TI*m)] <-
+                        c((NV*TI*(y.out[m]-1)+1):(NV*TI*y.out[m]))
+            Xi <- as.matrix(X.save[(NV*TI*(y.out[m]-1) + 1):(NV*TI*y.out[m]),])
             for (comp in c(1:n.contr)) {
                mi <- mi.mat[, comp]
                li <- mi %*% Xi
@@ -859,58 +889,58 @@ dynRYfit <- function(y, X, M, T, NV=1, vcov_e, maxiter=100, iter.tol=.1e-5,
       }
    } 
   
-   if(n.contr > NV*T) {
-      contrast.g1  <- as.matrix(g1[, (NV*T+1):n.contr])
-      contrast.g2  <- as.matrix(g2[, (NV*T+1):n.contr])
-      contrast.g3  <- as.matrix(g3[, (NV*T+1):n.contr])
+   if(n.contr > NV*TI) {
+      contrast.g1  <- as.matrix(g1[, (NV*TI+1):n.contr])
+      contrast.g2  <- as.matrix(g2[, (NV*TI+1):n.contr])
+      contrast.g3  <- as.matrix(g3[, (NV*TI+1):n.contr])
       contrast.mse <- contrast.g1 + contrast.g2 + 2*contrast.g3
-      contrast.fixed.var <- as.matrix(fixed.var[, (NV*T+1):n.contr])
+      contrast.fixed.var <- as.matrix(fixed.var[, (NV*TI+1):n.contr])
    }
    if(NV > 1) {
       eblup <- eblup.g1 <- eblup.g2 <- eblup.g3 <- eblup.wt1 <-
                eblup.wt2 <- est.fixed <- est.fixed.var <-
-               matrix(0, nrow=M*T, ncol=NV)
+               matrix(0, nrow=M*TI, ncol=NV)
       for (nv in 1:NV) {
-         for (t in 1:T) {
-            eblup[T*(0:(M-1))+t, nv] <-
-                      contrast.est[1:M, T*(nv-1) + t]
-            est.fixed[T*(0:(M-1))+t, nv] <-
-                      contrast.fixed.est[1:M, T*(nv-1) + t]
-            eblup.wt1[T*(0:(M-1))+t, nv] <-
-                      contrast.wt1[1:M, T*(nv-1) + t]
-            eblup.wt2[T*(0:(M-1))+t, nv] <-
-                      contrast.wt2[1:M, T*(nv-1) + t]
-            eblup.g1[T*(0:(M-1))+t, nv] <-
-                      g1[1:M, T*(nv-1) + t]
-            eblup.g2[T*(0:(M-1))+t, nv] <-
-                      g2[1:M, T*(nv-1) + t]
-            eblup.g3[T*(0:(M-1))+t, nv] <-
-                      g3[1:M,T*(nv-1) + t]
-            est.fixed.var[T*(0:(M-1))+t, nv] <-
-                      fixed.var[1:M, T*(nv-1) + t]
+         for (t in 1:TI) {
+            eblup[TI*(0:(M-1))+t, nv] <-
+                      contrast.est[1:M, TI*(nv-1) + t]
+            est.fixed[TI*(0:(M-1))+t, nv] <-
+                      contrast.fixed.est[1:M, TI*(nv-1) + t]
+            eblup.wt1[TI*(0:(M-1))+t, nv] <-
+                      contrast.wt1[1:M, TI*(nv-1) + t]
+            eblup.wt2[TI*(0:(M-1))+t, nv] <-
+                      contrast.wt2[1:M, TI*(nv-1) + t]
+            eblup.g1[TI*(0:(M-1))+t, nv] <-
+                      g1[1:M, TI*(nv-1) + t]
+            eblup.g2[TI*(0:(M-1))+t, nv] <-
+                      g2[1:M, TI*(nv-1) + t]
+            eblup.g3[TI*(0:(M-1))+t, nv] <-
+                      g3[1:M,TI*(nv-1) + t]
+            est.fixed.var[TI*(0:(M-1))+t, nv] <-
+                      fixed.var[1:M, TI*(nv-1) + t]
          }
       }
    } else {
       eblup <- eblup.g1 <- eblup.g2 <- eblup.g3 <- eblup.wt1 <-
-               eblup.wt2 <- est.fixed <- est.fixed.var <- rep(0, times=M*T)
-      for (t in 1:T) {
-         eblup[T*(0:(M-1))+t] <- contrast.est[1:M, t]
-         est.fixed[T*(0:(M-1))+t] <- contrast.fixed.est[1:M, t]
-         eblup.wt1[T*(0:(M-1))+t] <- contrast.wt1[1:M, t]
-         eblup.wt2[T*(0:(M-1))+t] <- contrast.wt2[1:M, t]
-         eblup.g1[T*(0:(M-1))+t] <- g1[1:M, t]
-         eblup.g2[T*(0:(M-1))+t] <- g2[1:M, t]
-         eblup.g3[T*(0:(M-1))+t] <- g3[1:M, t]
-         est.fixed.var[T*(0:(M-1))+t] <- fixed.var[1:M, t]
+               eblup.wt2 <- est.fixed <- est.fixed.var <- rep(0, times=M*TI)
+      for (t in 1:TI) {
+         eblup[TI*(0:(M-1))+t] <- contrast.est[1:M, t]
+         est.fixed[TI*(0:(M-1))+t] <- contrast.fixed.est[1:M, t]
+         eblup.wt1[TI*(0:(M-1))+t] <- contrast.wt1[1:M, t]
+         eblup.wt2[TI*(0:(M-1))+t] <- contrast.wt2[1:M, t]
+         eblup.g1[TI*(0:(M-1))+t] <- g1[1:M, t]
+         eblup.g2[TI*(0:(M-1))+t] <- g2[1:M, t]
+         eblup.g3[TI*(0:(M-1))+t] <- g3[1:M, t]
+         est.fixed.var[TI*(0:(M-1))+t] <- fixed.var[1:M, t]
       }
    }
    eblup.mse <- eblup.g1 + eblup.g2 + 2*eblup.g3
   
-   if(n.contr > NV*T) {
-      contrast.fixed.est <- as.matrix(contrast.fixed.est[, (NV*T+1):n.contr])
-      contrast.est <- as.matrix(contrast.est[, (NV*T+1):n.contr])
-      contrast.wt1 <- as.matrix(contrast.wt1[, (NV*T+1):n.contr]) 
-      contrast.wt2 <- as.matrix(contrast.wt2[, (NV*T+1):n.contr])
+   if(n.contr > NV*TI) {
+      contrast.fixed.est <- as.matrix(contrast.fixed.est[, (NV*TI+1):n.contr])
+      contrast.est <- as.matrix(contrast.est[, (NV*TI+1):n.contr])
+      contrast.wt1 <- as.matrix(contrast.wt1[, (NV*TI+1):n.contr]) 
+      contrast.wt2 <- as.matrix(contrast.wt2[, (NV*TI+1):n.contr])
    } else {
       contrast.fixed.est <- contrast.est <- contrast.wt1 <- contrast.wt2 <- 
           NULL

@@ -24,7 +24,7 @@ function(linear.subs, year.list, geocode, designvars)
             X[subs$Year == year, k] <- subs[subs$Year == year, var]
          }
       }
-      dimnames(X)[[2]] <- var.year
+      dimnames(X)[[2]] <- as.list(var.year)
       X <- data.frame(X)
       X[, designvars] <- subs[, designvars]
       ids.f <- formula(paste("~", designvars[2]))
@@ -36,6 +36,9 @@ function(linear.subs, year.list, geocode, designvars)
       formula1 <- make.formula(var.year)
       indx <- indx + 1
       vcovlist[[indx]] <- vcov(svytotal(formula1, design=dsgn))
+      if(!inherits(vcovlist[[indx]], "matrix")) {
+         vcovlist[[indx]] <- matrix(as.numeric(vcovlist[[indx]]), nrow=1, ncol=1)
+      } 
    }
    names(vcovlist) <- geo.list
    return(vcovlist)      

@@ -9,12 +9,12 @@
   components. The functions can fit univariate or multivariate models.
 }
 \usage{
-eblupDyn(formula,  D,  T,  vardir,  method = c("REML", "ML"),
+eblupDyn(formula,  D,  TI,  vardir,  method = c("REML", "ML"),
          MAXITER = 1000,  PRECISION = .1e-05,  data, 
          max.rho = NULL,  dampening = 1, \dots) 
          
          
-eblupRY(formula,  D,  T,  vardir,  method = c("REML", "ML"),
+eblupRY(formula,  D,  TI,  vardir,  method = c("REML", "ML"),
          MAXITER = 1000,  PRECISION = .1e-05,  data, 
          max.rho = .98, dampening = 0.9, \dots)
 }
@@ -22,45 +22,45 @@ eblupRY(formula,  D,  T,  vardir,  method = c("REML", "ML"),
   \item{formula}{For a univariate model, a \code{formula} for the linear
     regression relationship between the dependent variable and the
     independent variable(s). The variables included in formula must have
-    length equal to \code{D*T} and be sorted in ascending order by time 
+    length equal to \code{D*TI} and be sorted in ascending order by time 
     within each domain.
     
     
     For a multivariate model, a list of formulas, one for each 
     dependent variable. The number of dependent variables, \code{NV}, is 
     determined from the length of the list. The dependent variables included 
-    in the formulas must each have length equal to \code{D*T} and be sorted
+    in the formulas must each have length equal to \code{D*TI} and be sorted
     in ascending order by time within each component within each domain,
     which is an extension of the sorting requirement for the univariate 
     model. Further details of the model specification are given under 
     Details.
     }
   \item{D}{The total number of domains.}
-  \item{T}{The number of time instances, typically years (constant for all 
+  \item{TI}{The number of time instances, typically years (constant for all 
     domains).}
   \item{vardir}{For the univariate model, the sampling covariance matrix 
-    for the direct estimates of the \code{D*T} elements of the dependent 
+    for the direct estimates of the \code{D*TI} elements of the dependent 
     variable. The covariance matrix should be in the form of a square
-    matrix with \code{D*T} rows and columns. Non-zero covariances between 
+    matrix with \code{D*TI} rows and columns. Non-zero covariances between 
     domains are not allowed, so the matrix must have a block diagonal form 
-    with \code{D} blocks, each of which is a square matrix with \code{T} 
+    with \code{D} blocks, each of which is a square matrix with \code{TI} 
     rows and columns. Note that within domain, non-zero covariances are
     allowed over time. 
     
     Alternatively, \code{vardir} can be a list of 
-    \code{D} covariance matrices, each with \code{T} rows and columns.  
+    \code{D} covariance matrices, each with \code{TI} rows and columns.  
 
     
     For the multivariate model, the square covariance matrix for the 
-    \code{D*NV*T} elements of the dependent variables. The matrix must be
-    in the form of a square matrix with \code{D*NV*T} rows and columns. The 
+    \code{D*NV*TI} elements of the dependent variables. The matrix must be
+    in the form of a square matrix with \code{D*NV*TI} rows and columns. The 
     variances and covariances should be in the sort order of time within
     dependent variable within domain. Non-zero covariances between domains 
     are not allowed, but non-zero covariances may be present across time 
     and between components. 
     
     Alternatively, \code{vardir} can be a list of
-    \code{D} covariance matrices, each with \code{NV*T} rows and columns.}
+    \code{D} covariance matrices, each with \code{NV*TI} rows and columns.}
   \item{method}{Whether restricted maximum likelihood \code{REML} or 
     maximum likelihood \code{ML} should be used.}
   \item{MAXITER}{The maximum number of iterations allowed for the 
@@ -83,7 +83,8 @@ eblupRY(formula,  D,  T,  vardir,  method = c("REML", "ML"),
   \item{\dots}{Other parameters passed to \code{dynRYfit} that affect
        convergence, provide starting values, or request specific results. 
        The exceptions are \code{y}, \code{X}, \code{NV}, \code{M}, 
-       \code{ncolx}, and \code{model}.}
+       \code{ncolx}, and \code{model}, which will be set by either
+       \code{eblupDyn} or \code{eblupRY}.}
 }
 \details{
 A typical model has the form \code{response ~ terms} where \code{response}
@@ -116,7 +117,10 @@ rows of domain identifiers. These ids are returned in the list from
 
 If \code{iter.history} is set to \code{TRUE}, the returned object will 
 include additional items with values of statistics at each step of the 
-iteration; see \code{\link{dynRYfit}} for details. The default action
+iteration; see \code{\link{dynRYfit}} for details on \code{delta.hist}, 
+\code{llikelihood.hist}, \code{adj.hist}, \code{inf.mat.hist},
+\code{s.hist}, \code{ix.hist}, \code{adj.factor.hist}, and 
+\code{warning.hist}. The default action
 is to include the history only if the iterations fail, in which case
 the history might suggest what went wrong. In the case of convergence,
 the history is usually not of interest, in which case omitting it
@@ -134,8 +138,8 @@ true MSE in the same simulations.
 
 }
 \value{
-   \item{eblup}{In the univariate case, a vector of length \code{D*T} with 
-   the eblup estimates. In the multivariate case, a data frame of D*T rows 
+   \item{eblup}{In the univariate case, a vector of length \code{D*TI} with 
+   the eblup estimates. In the multivariate case, a data frame of D*TI rows 
    and NV columns.} 
    \item{fit}{A list summarizing the fit of the model with the following:
      \itemize{
@@ -208,11 +212,11 @@ Robert E. Fay, Mamadou Diallo
 }
 \examples{
 D <- 20 # number of domains
-T <- 5 # number of years
+TI <- 5 # number of years
 set.seed(1)
-data <- data.frame(Y= mvrnormSeries(D=D, T=T, rho.dyn=.9, sigma.v.dyn=1, 
-   sigma.u.dyn=.19, sigma.e=diag(5)), X=rep(1:T, times=D))
-result.dyn  <- eblupDyn(Y ~ X, D, T, vardir = diag(100), data=data)
+data <- data.frame(Y= mvrnormSeries(D=D, TI=TI, rho.dyn=.9, sigma.v.dyn=1, 
+   sigma.u.dyn=.19, sigma.e=diag(5)), X=rep(1:TI, times=D))
+result.dyn  <- eblupDyn(Y ~ X, D, TI, vardir = diag(100), data=data)
 result.dyn$fit
 
 require(sae)
@@ -220,18 +224,18 @@ data(spacetime)      # Load data set from sae package
 data(spacetimeprox)  # Load proximity matrix 
 
 D <- nrow(spacetimeprox)            # number of domains
-T <- length(unique(spacetime$Time)) # number of time instants
+TI <- length(unique(spacetime$Time)) # number of time instants
 # Fit model ST with AR(1) time effects for each domain
-resultST <- eblupSTFH(Y ~ X1 + X2, D, T, Var, spacetimeprox,
+resultST <- eblupSTFH(Y ~ X1 + X2, D, TI, Var, spacetimeprox,
                       data=spacetime)
-resultT  <- eblupDyn(Y ~ X1 + X2, D, T, vardir = diag(spacetime$Var),
+resultT  <- eblupDyn(Y ~ X1 + X2, D, TI, vardir = diag(spacetime$Var),
                       data=spacetime, ids=spacetime$Area)
-resultT.RY  <- eblupRY(Y ~ X1 + X2, D, T, vardir = diag(spacetime$Var),
+resultT.RY  <- eblupRY(Y ~ X1 + X2, D, TI, vardir = diag(spacetime$Var),
                       data=spacetime, ids=spacetime$Area)
 resultST$fit
 resultT$fit
 resultT.RY$fit
-rowsT <- seq(T, T*D, by=T)
+rowsT <- seq(TI, TI*D, by=TI)
 data.frame(Domain=spacetime$Area[rowsT], Y=spacetime$Y[rowsT], 
               EBLUP_ST=resultST$eblup[rowsT],
               EBLUB_Dyn=resultT$eblup[rowsT],

@@ -1,15 +1,33 @@
 Package: sae2
-Type: Package
+Version: 1.2-1
+Date: 2023-08-22
 Title: Small Area Estimation: Time-Series Models
-Version: 1.0-1
-Date: 2019-07-21
-Author: Robert E. Fay, Mamadou Diallo
+Authors@R: c(person(given="Robert", family="Fay", role=c("aut", "cre"),
+                    email="bobfay@hotmail.com"),
+             person(family="Diallo", given="Mamadou", role="aut",
+             email="msdiallo@samplics.org"))
+Author: Robert Fay [aut, cre],
+  Mamadou Diallo [aut]
 Maintainer: Robert Fay <bobfay@hotmail.com>
 Depends: R (>= 2.14.0), MASS, survey, stats
-Suggests: sae, saery
-Description: Time series models for small area estimation based on area-level models.
+Suggests: sae
+Description: Time series area-level models for small area estimation. 
+      The package supplements the functionality of the sae package.
+      Specifically, it includes EBLUP fitting of the original Rao-Yu model, 
+      which in the original form did not have a spatial component. The 
+      package also offers a modified ('dynamic') version of the Rao-Yu model, 
+      replacing the assumption of stationarity. Both univariate and 
+      multivariate applications are supported. Of particular note is the 
+      allowance for covariance of the area-level sample estimates over time, 
+      as encountered in rotating panel designs such as the U.S. National 
+      Crime Victimization Survey or present in a time-series of 5-year 
+      estimates from the American Community Survey. Key references to the 
+      methods include
+      J.N.K. Rao and I. Molina (2015, ISBN:9781118735787),
+      J.N.K. Rao and M. Yu (1994) <doi:10.2307/3315407>, and
+      R.E. Fay and R.A. Herriot (1979) <doi:10.1080/01621459.1979.10482505>.
 License: GPL-2
 NeedsCompilation: no
-Packaged: 2019-07-22 01:40:59 UTC; bobfa
+Packaged: 2023-08-22 20:40:11 UTC; bobfa
 Repository: CRAN
-Date/Publication: 2019-07-22 04:20:02 UTC
+Date/Publication: 2023-08-23 09:10:02 UTC

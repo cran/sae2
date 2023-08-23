@@ -11,7 +11,7 @@
   convenient \code{eblupDyn} or \code{eblupRY}.
 }
 \usage{
-dynRYfit(y,  X,  M,  T,  NV=1,  vcov_e,  maxiter=100, 
+dynRYfit(y,  X,  M,  TI,  NV=1,  vcov_e,  maxiter=100, 
          iter.tol=.1e-5,  ncolx=NULL,  sig2_u=1,  sig2_v=1, 
          rho=.8,  rho_u =.4,  delta=NULL,  rho.fixed=NULL, 
          y.include=NULL, ids=NULL,  contrast.matrix=NULL,  
@@ -30,20 +30,20 @@ dynRYfit(y,  X,  M,  T,  NV=1,  vcov_e,  maxiter=100,
     rows as the length of \code{y}.}
   \item{M}{The total number of domains, equivalent to \code{D} in 
       \code{eblupDyn} and \code{eblupRY}.}
-  \item{T}{The number of time instances (constant for all domains).}
+  \item{TI}{The number of time instances (constant for all domains).}
   \item{NV}{The number of dependent variables.}
   \item{vcov_e}{For the univariate model, the sampling covariance matrix 
-    for the direct estimates of the \code{M*T} elements of the dependent 
+    for the direct estimates of the \code{M*TI} elements of the dependent 
     variable. The covariance matrix should be in the form of a square
-    matrix with \code{M*T} rows and columns. Non-zero covariances between 
+    matrix with \code{M*TI} rows and columns. Non-zero covariances between 
     domains are not allowed, so the matrix must have block
     diagonal form with \code{M} blocks, each of which is a square matrix
-    with \code{T} rows and columns. Note that within domain, non-zero 
+    with \code{TI} rows and columns. Note that within domain, non-zero 
     covariances are allowed over time.
     
     For the multivariate model, the square covariance matrix for the 
-    \code{M*NV*T} elements of the dependent variables. The matrix should be 
-    in the form of a square matrix with \code{M*NV*T} rows and columns. Time 
+    \code{M*NV*TI} elements of the dependent variables. The matrix should be 
+    in the form of a square matrix with \code{M*NV*TI} rows and columns. Time 
     should vary within variable, which should vary within domain.
     Non-zero covariances between domains are not allowed, but non-zero 
     covariances may be present across time and between variables.}
@@ -88,9 +88,9 @@ dynRYfit(y,  X,  M,  T,  NV=1,  vcov_e,  maxiter=100,
   \item{ids}{A data frame with \code{M} rows giving ids for each of the
              domains. The data frame is copied into the returned object.}
   \item{contrast.matrix}{A matrix of coefficients of contrasts. The matrix
-             must have \code{T*NV} rows, but it can contain an arbitrary number
+             must have \code{TI*NV} rows, but it can contain an arbitrary number
              of columns. Within each domain, the coefficients are applied
-             to the \code{T*NV} EBLUP estimates.}
+             to the \code{TI*NV} EBLUP estimates.}
   \item{baby.steps}{Unless specified as FALSE, the first five iterations of the
              Fisher scoring algorithm are dampened by factors of 
              \code{c(.0625, .125, .25, .5, .75)}. These heuristically derived 
@@ -150,12 +150,12 @@ dynRYfit(y,  X,  M,  T,  NV=1,  vcov_e,  maxiter=100,
    be passed to \code{dynRYfit} through \code{eblupDyn} or \code{eblupRY}.
 }
 \value{
-   \item{eblup}{In the univariate case, a vector of length \code{M*T} with 
+   \item{eblup}{In the univariate case, a vector of length \code{M*TI} with 
    the eblup estimates in the same sort order as \code{y}. In the multivariate
-   case, a matrix of M*T rows and NV columns.}
+   case, a matrix of M*TI rows and NV columns.}
    \item{fit}{A list summarizing the fit of the model with the following:
      \itemize{ 
-       \item \code{model:} form of the model: T - Dynamic or RaoYu; REML
+       \item \code{model:} form of the model: TI - Dynamic or RaoYu; REML
             or ML.
        \item \code{covergence:} a logical value indicating whether the 
                  convergence criterion was met.

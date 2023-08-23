@@ -10,7 +10,7 @@
   \code{mvrnorm} in \pkg{MASS}.
 }
 \usage{
-mvrnormSeries(NV=1,  D,  T,  sigma.e, 
+mvrnormSeries(NV=1,  D,  TI,  sigma.e, 
    rho.dyn,  sigma.v.dyn,  sigma.u.dyn, rho.u.dyn, 
    rho.RY,   sigma.v.RY,   sigma.u.RY,   rho.u.RY,  tol=1e-6,
    conditional.mean=FALSE)
@@ -18,11 +18,11 @@ mvrnormSeries(NV=1,  D,  T,  sigma.e,
 \arguments{
   \item{NV}{The number of variables.}
   \item{D}{The number of domains.}
-  \item{T}{The number of time instances (constant for all domains).}
+  \item{TI}{The number of time instances (constant for all domains).}
   \item{sigma.e}{The covariance matrix for the variation due to sampling,
-    specified either as a single square matrix with \code{NV*T} rows and 
-    columns, or as a list of \code{D} matrices, each with \code{NV*T} rows 
-    and columns. The rows should vary over \code{T} more quickly than over
+    specified either as a single square matrix with \code{NV*TI} rows and 
+    columns, or as a list of \code{D} matrices, each with \code{NV*TI} rows 
+    and columns. The rows should vary over \code{TI} more quickly than over
     \code{NV}. Sampling covariances between domains are assumed to be zero.
     }
   \item{rho.dyn}{The temporal correlation parameter in the dynamic model.
@@ -58,8 +58,8 @@ under the dynamic model (if specified), the Rao-Yu model (if specified)
 and a required sampling covariance matrix.
 }
 \value{If \code{conditional.mean=FALSE}, then for \code{NV=1}, a multivariate 
-       normal random vector with mean zero and length \code{D*T}. 
-       For \code{NV>1}, a matrix with \code{D*T} rows and \code{NV} 
+       normal random vector with mean zero and length \code{D*TI}. 
+       For \code{NV>1}, a matrix with \code{D*TI} rows and \code{NV} 
        columns.
        
        If \code{conditional.mean=TRUE}, a list with the first element as above 
@@ -74,9 +74,9 @@ Robert E. Fay
 }
 \examples{
 set.seed(7)
-mvrnormSeries(D=2, T=5, sigma.e=diag(5), rho.dyn=.8,
+mvrnormSeries(D=2, TI=5, sigma.e=diag(5), rho.dyn=.8,
     sigma.v.dyn=2, sigma.u.dyn=.72, conditional.mean=TRUE)
-mvrnormSeries(NV=2, D=2, T=5, sigma.e=diag(10), rho.dyn=.8,
+mvrnormSeries(NV=2, D=2, TI=5, sigma.e=diag(10), rho.dyn=.8,
     sigma.v.dyn=2, sigma.u.dyn=.72, rho.u.dyn=.8)
 }
 \seealso{\code{\link{mvrnorm}}

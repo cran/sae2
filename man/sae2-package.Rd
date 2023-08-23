@@ -6,17 +6,24 @@
 Small Area Estimation: Time-Series Models.
 }
 \description{
-Time series models to supplement the functionality of the package \code{sae}, 
-specifically EBLUP fitting of the original Rao-Yu model and also of a modified
-("dynamic") version. Both univariate and multivariate applications are 
-supported. The models are non-spatial, in contrast to the spatial models in 
-\code{sae} for the Rao-Yu model.}
+Time series are-level models for small area estimation. 
+      The package supplements the functionality of the package \code{sae}. 
+      Specifically, it includes EBLUP fitting of the original 
+      Rao-Yu model, which did not have a spatial component. It also offers 
+      a modified ("dynamic") version of the Rao-Yu model, replacing the 
+      assumption of stationarity. Both univariate and multivariate applications 
+      are supported. Of particular note is the allowance for covariance of
+      the area-level sample estimates over time, as encountered in
+      rotating panel designs such as the U.S. National Crime Victimization
+      Survey or present in a time-series of 5-year estimates from the 
+      American Community Survey.
+}
 \details{
 \tabular{ll}{
 Package: \tab sae2\cr
 Type: \tab Package\cr
-Version: \tab 1.0-1\cr
-Date: \tab 2019-07-21\cr
+Version: \tab 1.2-1\cr
+Date: \tab 2023-08-22\cr
 License: \tab GPL-2\cr
 }
 The package provides two primary functions, \code{eblupRY} and \code{eblupDyn}, 
@@ -42,6 +49,5 @@ Maintainer: Robert E. Fay <bobfay@hotmail.com>
 
 }
 \seealso{
-\code{\link[sae:sae-package]{sae}},
-\code{saery}
+\code{\link[sae:sae-package]{sae}}
 }
