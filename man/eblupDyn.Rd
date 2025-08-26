@@ -21,46 +21,59 @@ eblupRY(formula,  D,  TI,  vardir,  method = c("REML", "ML"),
 \arguments{
   \item{formula}{For a univariate model, a \code{formula} for the linear
     regression relationship between the dependent variable and the
-    independent variable(s). The variables included in formula must have
-    length equal to \code{D*TI} and be sorted in ascending order by time 
-    within each domain.
+    independent variable(s). The variables included in \code{formula} must have
+    length equal to \code{D*nt} and be sorted in ascending order by time 
+    within each domain, where \code{nt} is the number of time instances specified
+    by \code{TI}. 
     
     
     For a multivariate model, a list of formulas, one for each 
     dependent variable. The number of dependent variables, \code{NV}, is 
-    determined from the length of the list. The dependent variables included 
-    in the formulas must each have length equal to \code{D*TI} and be sorted
+    determined by the length of the list. The dependent variables included 
+    in the formulas must each have length equal to \code{D*nt} and be sorted
     in ascending order by time within each component within each domain,
-    which is an extension of the sorting requirement for the univariate 
-    model. Further details of the model specification are given under 
+    where \code{nt} is the number of time instances specified by \code{TI}.
+    The sorting requirement is an extension of the sorting requirement for the 
+    univariate model. Further details of the model specification are given under 
     Details.
     }
   \item{D}{The total number of domains.}
-  \item{TI}{The number of time instances, typically years (constant for all 
-    domains).}
+  \item{TI}{If \code{TI} is of length 1, it should specify the number of equally
+    spaced time instances, \code{nt}. For example, \code{TI} can be the number 
+    of years in an unbroken sequence of years.
+    
+    
+    If some of the time instances in the time interval are to be omitted from the model, 
+    the first element of TI should be 1, the last element should be the ending 
+    instance, and the elements in between should indicate the other instances to include.
+    For example, over a period of 6 years, \code{TI=c(1,2, 4:6)} omits the 3rd year
+    from the model, giving \code{nt=5}.}
   \item{vardir}{For the univariate model, the sampling covariance matrix 
-    for the direct estimates of the \code{D*TI} elements of the dependent 
-    variable. The covariance matrix should be in the form of a square
-    matrix with \code{D*TI} rows and columns. Non-zero covariances between 
+    for the direct estimates of the \code{D*nt} elements of the dependent 
+    variable, where \code{nt} is the number of instances specified by \code{TI}.
+    The covariance matrix should be in the form of a square
+    matrix with \code{D*nt} rows and columns. Non-zero covariances between 
     domains are not allowed, so the matrix must have a block diagonal form 
-    with \code{D} blocks, each of which is a square matrix with \code{TI} 
+    with \code{D} blocks, each of which is a square matrix with \code{nt} 
     rows and columns. Note that within domain, non-zero covariances are
     allowed over time. 
     
+    
     Alternatively, \code{vardir} can be a list of 
-    \code{D} covariance matrices, each with \code{TI} rows and columns.  
+    \code{D} covariance matrices, each with \code{nt} rows and columns.  
 
     
     For the multivariate model, the square covariance matrix for the 
-    \code{D*NV*TI} elements of the dependent variables. The matrix must be
-    in the form of a square matrix with \code{D*NV*TI} rows and columns. The 
+    \code{D*NV*nt} elements of the dependent variables. The matrix must be
+    in the form of a square matrix with \code{D*NV*nt} rows and columns. The 
     variances and covariances should be in the sort order of time within
     dependent variable within domain. Non-zero covariances between domains 
     are not allowed, but non-zero covariances may be present across time 
-    and between components. 
+    and between components within a domain. 
+
     
     Alternatively, \code{vardir} can be a list of
-    \code{D} covariance matrices, each with \code{NV*TI} rows and columns.}
+    \code{D} covariance matrices, each with \code{NV*nt} rows and columns.}
   \item{method}{Whether restricted maximum likelihood \code{REML} or 
     maximum likelihood \code{ML} should be used.}
   \item{MAXITER}{The maximum number of iterations allowed for the 
@@ -83,7 +96,7 @@ eblupRY(formula,  D,  TI,  vardir,  method = c("REML", "ML"),
   \item{\dots}{Other parameters passed to \code{dynRYfit} that affect
        convergence, provide starting values, or request specific results. 
        The exceptions are \code{y}, \code{X}, \code{NV}, \code{M}, 
-       \code{ncolx}, and \code{model}, which will be set by either
+       \code{ncolx}, and \code{model}, which will be determined by 
        \code{eblupDyn} or \code{eblupRY}.}
 }
 \details{
@@ -93,12 +106,16 @@ specifies a linear predictor for response.
 
 
 A formula has an implied intercept term. To remove this use either 
-y ~ x - 1 or y ~ 0 + x. See \code{\link{formula}} for more details of 
+y ~ x - 1 or y ~ 0 + x. See \code{link{formula}} for more details of 
 allowed formulae.
 
 
 \code{eblupDyn} and \code{eblupRY} parse \code{formula} by calling core
-R functions to determine \code{X}, then calling \code{\link{dynRYfit}}.
+R functions to determine \code{X}, then calling \code{\link{dynRYfit}}. 
+Factors appearing in \code{terms} will be converted to indicator variables 
+in forming \code{X} before calling \code{dynRYfit}.
+
+
 As a last step, \code{eblupDyn} or \code{eblupRY} finalize the list that 
 they return.
 
@@ -117,13 +134,20 @@ rows of domain identifiers. These ids are returned in the list from
 
 If \code{iter.history} is set to \code{TRUE}, the returned object will 
 include additional items with values of statistics at each step of the 
-iteration; see \code{\link{dynRYfit}} for details on \code{delta.hist}, 
-\code{llikelihood.hist}, \code{adj.hist}, \code{inf.mat.hist},
-\code{s.hist}, \code{ix.hist}, \code{adj.factor.hist}, and 
-\code{warning.hist}. The default action
-is to include the history only if the iterations fail, in which case
-the history might suggest what went wrong. In the case of convergence,
-the history is usually not of interest, in which case omitting it
+iteration; see \code{\link{dynRYfit}} for details on 
+             \itemize{
+               \item \code{delta.hist}, 
+               \item \code{llikelihood.hist},
+               \item \code{adj.hist}, 
+               \item \code{s.hist}, 
+               \item \code{ix.hist}, 
+               \item \code{adj.factor.hist}, and 
+               \item \code{warning.hist}.
+               }
+               
+The default action is to include the history only if the iterations fail, 
+in which case the history might suggest what went wrong. In the case of 
+convergence, the history is usually not of interest, in which case omitting it
 reduces the size of the returned object.
 
 
@@ -138,8 +162,8 @@ true MSE in the same simulations.
 
 }
 \value{
-   \item{eblup}{In the univariate case, a vector of length \code{D*TI} with 
-   the eblup estimates. In the multivariate case, a data frame of D*TI rows 
+   \item{eblup}{In the univariate case, a vector of length \code{D*nt} with 
+   the eblup estimates. In the multivariate case, a data frame of D*nt rows 
    and NV columns.} 
    \item{fit}{A list summarizing the fit of the model with the following:
      \itemize{
@@ -147,8 +171,7 @@ true MSE in the same simulations.
             or ML.
        \item \code{covergence:} a logical value indicating whether the 
                  convergence criterion was met.
-       \item \code{iterations:} number of iterations performed by the 
-                Fisher-scoring algorithm.
+       \item \code{TI:} specified TI for model (see above).
        \item \code{estcoef:} a data frame with the estimated model 
            coefficients (\code{beta}) in the first column , 
            their asymptotic standard errors (\code{std.error}) in the 
@@ -159,6 +182,8 @@ true MSE in the same simulations.
            of the variances and correlation coefficients in the first column
            (\code{estimate}) and their asymptotic standard errors in the 
            second column (\code{std.error}).
+       \item \code{iterations:} number of iterations performed by the 
+                Fisher-scoring algorithm.
        \item \code{goodness:} the log-likelihood and, if REML, the restricted 
            log-likelihood.
        }
@@ -198,13 +223,13 @@ true MSE in the same simulations.
 }
 
 \references{
-- Fay, R.E. and Herriot, R.A. (1979). Estimation of income from small places: An application of James-Stein procedures to census data. Journal of the American Statistical Association 74, 269-277.
+- Fay, R.E. and Herriot, R.A. (1979). Estimation of income from small places: An application of James-Stein procedures to census data. \emph{Journal of the American Statistical Association 74}, 269-277.
 
-- Fay, R.E., Planty, M. and Diallo, M.S. (2013). Small area estimates from the National Crime Victimization Survey. Proceedings of the Joint Statistical Meetings. American Statistical Association, pp. 1544-1557.
+- Fay, R.E., Planty, M. and Diallo, M.S. (2013). Small area estimates from the National Crime Victimization Survey. \emph{Proceedings of the Joint Statistical Meetings}. American Statistical Association, pp. 1544-1557.
 
-- Rao, J.N.K. and Molina, I. (2015). Small Area Estimation, 2nd ed. Wiley, Hoboken, NJ.
+- Rao, J.N.K. and Molina, I. (2015). \emph{Small Area Estimation}, 2nd ed. Wiley, Hoboken, NJ.
 
-- Rao, J.N.K. and Yu, M. (1994). Small area estimation by combining time series and cross-sectional data. Canadian Journal of Statistics 22, 511-528.
+- Rao, J.N.K. and Yu, M. (1994). Small area estimation by combining time series and cross-sectional data. \emph{Canadian Journal of Statistics 22}, 511-528.
 
 }
 \author{
@@ -219,6 +244,7 @@ data <- data.frame(Y= mvrnormSeries(D=D, TI=TI, rho.dyn=.9, sigma.v.dyn=1,
 result.dyn  <- eblupDyn(Y ~ X, D, TI, vardir = diag(100), data=data)
 result.dyn$fit
 
+\dontrun{
 require(sae)
 data(spacetime)      # Load data set from sae package
 data(spacetimeprox)  # Load proximity matrix 
@@ -240,5 +266,6 @@ data.frame(Domain=spacetime$Area[rowsT], Y=spacetime$Y[rowsT],
               EBLUP_ST=resultST$eblup[rowsT],
               EBLUB_Dyn=resultT$eblup[rowsT],
               EBLUP_RY=resultT.RY$eblup[rowsT])
+}
 }
 

@@ -79,5 +79,3 @@ mvrnormSeries(D=2, TI=5, sigma.e=diag(5), rho.dyn=.8,
 mvrnormSeries(NV=2, D=2, TI=5, sigma.e=diag(10), rho.dyn=.8,
     sigma.v.dyn=2, sigma.u.dyn=.72, rho.u.dyn=.8)
 }
-\seealso{\code{\link{mvrnorm}}
-}

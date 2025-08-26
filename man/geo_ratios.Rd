@@ -84,7 +84,7 @@ Crime Victimization Survey requires this capability.
 }
 
 \references{
-- Woodruff, R.S. (1971). A simple method for approximating the variance of a complex estimate. Journal of the American Statistical Association 66, 411-414.
+- Woodruff, R.S. (1971). A simple method for approximating the variance of a complex estimate. \emph{Journal of the American Statistical Association 66}, 411-414.
 
 }
 

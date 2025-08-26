@@ -6,9 +6,9 @@
   Function designed to be called by either \code{eblupDyn} or \code{eblupRY}
   to produce EBLUP small area estimates of the dynamic or Rao-Yu time 
   series models through either ML or REML estimation of the variance 
-  components. For completeness, the function is documented here, but
-  users are encouraged to base applications on calls to the more
-  convenient \code{eblupDyn} or \code{eblupRY}.
+  components. For completeness and as a reference to several optional
+  parameters, the function is documented here, but users are encouraged to 
+  base applications on calls to the more convenient \code{eblupDyn} or \code{eblupRY}.
 }
 \usage{
 dynRYfit(y,  X,  M,  TI,  NV=1,  vcov_e,  maxiter=100, 
@@ -30,23 +30,33 @@ dynRYfit(y,  X,  M,  TI,  NV=1,  vcov_e,  maxiter=100,
     rows as the length of \code{y}.}
   \item{M}{The total number of domains, equivalent to \code{D} in 
       \code{eblupDyn} and \code{eblupRY}.}
-  \item{TI}{The number of time instances (constant for all domains).}
+  \item{TI}{If \code{TI} is of length 1, it should specify the number of equally
+    spaced time instances, \code{nt}; for example, the number of years in an
+    unbroken sequence of years.
+    
+    
+    If some of the time instances in the time interval are to be omitted from the model, 
+    the first element of TI should be 1, the last element should be the ending 
+    instance, and the elements in between should indicate the other instances to include.
+    For example, over a period of 6 years, \code{TI=c(1,2, 4:6)} omits the 3rd year
+    from the model, giving \code{nt=5}.}
   \item{NV}{The number of dependent variables.}
-  \item{vcov_e}{For the univariate model, the sampling covariance matrix 
-    for the direct estimates of the \code{M*TI} elements of the dependent 
-    variable. The covariance matrix should be in the form of a square
-    matrix with \code{M*TI} rows and columns. Non-zero covariances between 
-    domains are not allowed, so the matrix must have block
-    diagonal form with \code{M} blocks, each of which is a square matrix
-    with \code{TI} rows and columns. Note that within domain, non-zero 
+  \item{vcov_e}{For the univariate model, the sampling covariance matrix for  
+    the direct estimates of the \code{M*nt} elements of the dependent 
+    variable, where \code{nt} is based on \code{TI}. The covariance matrix should be 
+    in the form of a square matrix with \code{M*nt} rows and columns. 
+    Non-zero covariances between domains are not allowed, so the matrix must have 
+    block diagonal form with \code{M} blocks, each of which is a square matrix
+    with \code{nt} rows and columns. Note that within domain, non-zero 
     covariances are allowed over time.
+
     
     For the multivariate model, the square covariance matrix for the 
-    \code{M*NV*TI} elements of the dependent variables. The matrix should be 
-    in the form of a square matrix with \code{M*NV*TI} rows and columns. Time 
+    \code{M*NV*nt} elements of the dependent variables. The matrix should be 
+    in the form of a square matrix with \code{M*NV*nt} rows and columns. Time 
     should vary within variable, which should vary within domain.
     Non-zero covariances between domains are not allowed, but non-zero 
-    covariances may be present across time and between variables.}
+    covariances may be present across time and between variables within each domain.}
   \item{maxiter}{The maximum number of iterations allowed for the 
     Fisher-scoring algorithm, with a default value of 100.}
   \item{iter.tol}{The convergence tolerance limit for the 
@@ -72,12 +82,12 @@ dynRYfit(y,  X,  M,  TI,  NV=1,  vcov_e,  maxiter=100,
     \code{sig2_u}, \code{sig2_v}, \code{rho}, or \code{rho_u}. In the 
     univariate case, delta should contain \code{sig2_u}, \code{sig2_v}, and 
     \code{rho}. In the bivariate case, \code{delta} should be of length 6 with
-    \code{sig2_u} and \code{sig2_v}, each of length 2, \code{rho}, and 
+    \code{sig2_u} and \code{sig2_v} each of length 2, then \code{rho}, and 
     \code{rho_u}. Similarly, for 3 dependent variables, the length of 
     \code{delta} is 10, with the last 3 elements \code{rho_u} in lower
     triangular form.}
   \item{rho.fixed}{If TRUE, the value of \code{rho} imbedded in \code{delta},
-    if specified, or else given by \code{rho} will remain fixed during the
+    if specified, or else given by \code{rho}, will remain fixed during the
     iterations. Among other features, this allows the likelihood function
     for trial values of \code{rho} to be computed at the maximum over the
     other random effect parameters.}
@@ -88,9 +98,9 @@ dynRYfit(y,  X,  M,  TI,  NV=1,  vcov_e,  maxiter=100,
   \item{ids}{A data frame with \code{M} rows giving ids for each of the
              domains. The data frame is copied into the returned object.}
   \item{contrast.matrix}{A matrix of coefficients of contrasts. The matrix
-             must have \code{TI*NV} rows, but it can contain an arbitrary number
+             must have \code{nt*NV} rows, but it can contain an arbitrary number
              of columns. Within each domain, the coefficients are applied
-             to the \code{TI*NV} EBLUP estimates.}
+             to the \code{nt*NV} EBLUP estimates.}
   \item{baby.steps}{Unless specified as FALSE, the first five iterations of the
              Fisher scoring algorithm are dampened by factors of 
              \code{c(.0625, .125, .25, .5, .75)}. These heuristically derived 
@@ -103,13 +113,20 @@ dynRYfit(y,  X,  M,  TI,  NV=1,  vcov_e,  maxiter=100,
              .9 for the Rao-Yu model.}
   \item{iter.history}{If TRUE, key values are saved during each  
              iteration and included as additional items, described below,
-             in the returned list: \code{delta.hist}, \code{llikelihood.hist},
-             \code{adj.hist}, \code{s.hist}, \code{ix.hist}, 
-             \code{adj.factor.hist}, and \code{warning.hist}.
+             in the returned list: 
+             \itemize{
+               \item \code{delta.hist}, 
+               \item \code{llikelihood.hist},
+               \item \code{adj.hist}, 
+               \item \code{s.hist}, 
+               \item \code{ix.hist}, 
+               \item \code{adj.factor.hist}, and 
+               \item \code{warning.hist}.
+               }
              
-             If \code{iter.history} is not specified, these items will be 
-             returned only if the calculations are begun but not successfully 
-             completed.}
+             
+  If \code{iter.history} is not specified, these items will be  returned only 
+  if the calculations are begun but not successfully completed.}
   \item{sig2.min.factor}{A factor to multiply the minimum direct variance to
          use as a minimum value for any of the variance components. The 
          iterations will be constrained not to go below the resulting bounds.}
@@ -150,12 +167,12 @@ dynRYfit(y,  X,  M,  TI,  NV=1,  vcov_e,  maxiter=100,
    be passed to \code{dynRYfit} through \code{eblupDyn} or \code{eblupRY}.
 }
 \value{
-   \item{eblup}{In the univariate case, a vector of length \code{M*TI} with 
+   \item{eblup}{In the univariate case, a vector of length \code{M*nt} with 
    the eblup estimates in the same sort order as \code{y}. In the multivariate
-   case, a matrix of M*TI rows and NV columns.}
+   case, a matrix of M*nt rows and NV columns.}
    \item{fit}{A list summarizing the fit of the model with the following:
      \itemize{ 
-       \item \code{model:} form of the model: TI - Dynamic or RaoYu; REML
+       \item \code{model:} form of the model: T - Dynamic or RaoYu; REML
             or ML.
        \item \code{covergence:} a logical value indicating whether the 
                  convergence criterion was met.
